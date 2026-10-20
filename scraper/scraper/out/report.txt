@@ -1,0 +1,44 @@
+==========================================================
+BAO CAO CHAT LUONG DU LIEU
+==========================================================
+San pham hop le      : 1456
+Thuong hieu          : 183
+Danh muc             : 22
+Anh san pham         : 8919  (TB 6.1/sp)
+Lien ket sp-danh muc : 1736
+
+-- Ghi chu --
+ok                    : 1456
+nhieu_bien_the        : 563
+het_hang              : 708
+thieu_brand           : 14
+thieu_mo_ta           : 4
+khong_co_rating       : 1214
+
+Gia: min 18,000d  |  trung vi 446,700d  |  max 14,490,000d
+Co giam gia: 0 san pham
+Con hang   : 748 san pham
+
+Phan bo danh muc:
+  Dưỡng da                     718
+  Trang điểm                   441
+  Chăm sóc cơ thể              209
+  Làm sạch                     58
+  Chăm sóc cá nhân             55
+  Serum                        40
+  Sữa rửa mặt                  37
+  Chống nắng                   36
+  Kem dưỡng mặt                26
+  Tẩy trang                    25
+  Mặt nạ                       21
+  Mặt nạ giấy                  10
+  Xịt khoáng                   9
+  Son kem                      9
+  Dầu gội                      9
+  Nước hoa                     9
+  Dưỡng thể                    7
+  Sữa tắm                      6
+  Kem nền                      4
+  Cushion                      3
+  Kem dưỡng mắt                2
+  Thực phẩm chức năng          2

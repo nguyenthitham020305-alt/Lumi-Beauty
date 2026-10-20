@@ -1,0 +1,10 @@
+# Thu vien can thiet cho scraper.py va transform.py
+#   pip install -r requirements.txt
+
+requests==2.34.2          # goi API Beauty Box
+beautifulsoup4==4.15.0    # bo the HTML trong mo ta san pham (transform.py)
+
+# pandas KHONG bat buoc de chay pipeline (scraper.py + transform.py chi dung
+# thu vien chuan: json, csv, re, html, concurrent.futures).
+# Chi can neu muon doc/kiem tra file CSV ket qua.
+pandas==3.0.5

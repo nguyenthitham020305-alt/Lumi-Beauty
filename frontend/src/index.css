@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+
+  /* Xanh ngọc lấy từ logo (#127A6A = brand-600) */
+  --color-brand-50: #effaf7;
+  --color-brand-100: #d8f2ea;
+  --color-brand-200: #b3e4d6;
+  --color-brand-300: #7fcfba;
+  --color-brand-400: #4bb39b;
+  --color-brand-500: #2a9782;
+  --color-brand-600: #127a6a;
+  --color-brand-700: #116257;
+  --color-brand-800: #124f47;
+  --color-brand-900: #11413b;
+
+  /* Hồng pastel cho khuyến mãi, giá sale */
+  --color-blush-50: #fff3f6;
+  --color-blush-100: #ffe3ea;
+  --color-blush-200: #ffc9d6;
+  --color-blush-300: #ffa0b8;
+  --color-blush-400: #fb6f93;
+  --color-blush-500: #ef4673;
+  --color-blush-600: #d42c5b;
+
+  --shadow-card: 0 4px 20px -6px rgb(17 65 59 / 0.12);
+}
+
+@layer base {
+  body {
+    @apply bg-white font-sans text-[15px] text-slate-800 antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility container-page {
+  @apply mx-auto w-full max-w-[1240px] px-4;
+}

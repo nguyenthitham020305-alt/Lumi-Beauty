@@ -1,0 +1,23 @@
+category_id,slug,name,description,image,parent_id
+4,trang-diem,Trang điểm,,,
+5,duong-da,Dưỡng da,,,
+9,cham-soc-ca-nhan,Chăm sóc cá nhân,,,
+20,sua-tam,Sữa tắm,,https://image.hsv-tech.io/bbx/common/0932955a-ecf5-41cd-97a8-c92f0fae25a2.webp,
+26,cham-soc-co-the,Chăm sóc cơ thể,,,
+11,kem-duong-mat,Kem dưỡng mặt,,https://image.hsv-tech.io/bbx/common/31eb6499-2639-4fdc-baa0-9ee9c1a6ba38.webp,
+17,sua-rua-mat,Sữa rửa mặt,,https://image.hsv-tech.io/bbx/common/bf93f2dd-feba-4078-bd5b-f61e2e7bf567.webp,
+12,serum-duong-da,Serum,,https://image.hsv-tech.io/bbx/common/cc6679a9-6b6d-4cd4-9777-e652fc3f841d.webp,
+10,kem-duong-da-vung-mat,Kem dưỡng mắt,,https://image.hsv-tech.io/bbx/common/3dc19ed1-eac1-4014-9fce-8348d732e6c5.webp,9
+18,kem-tay-trang,Tẩy trang,,https://image.hsv-tech.io/bbx/product-categories/88a97c61-72c9-4c42-a97c-866b5be4c8c9.webp,
+15,son-kem,Son kem,,https://image.hsv-tech.io/bbx/common/162ac1ca-412f-45d4-b252-4564d5a7361d.webp,
+13,mat-na,Mặt nạ,,https://image.hsv-tech.io/bbx/common/c56c7482-1b55-4271-a696-a4b4e679540d.webp,
+21,kem-duong-the,Dưỡng thể,,https://image.hsv-tech.io/bbx/common/90674342-beac-4666-9973-a175bf6d2483.webp,
+19,kem-chong-nang,Chống nắng,,https://image.hsv-tech.io/bbx/common/8cfe48c7-6c4b-4f33-a3d6-a4810d1330b5.webp,
+24,thuc-pham-chuc-nang,Thực phẩm chức năng,,https://image.hsv-tech.io/bbx/common/d447067e-08fd-4b37-9fd2-5554738e8537.webp,
+28,kem-nen,Kem nền,,https://image.hsv-tech.io/bbx/common/95ce6472-eda0-4ea5-87c4-5b368a54e5c7.webp,
+6,mat-na-giay-duong-da,Mặt nạ giấy,,https://image.hsv-tech.io/bbx/common/4a02112f-0f87-4afd-a63b-0e26b87f2d79.webp,5
+16,phan-nuoc-trang-diem-cushion,Cushion,,https://image.hsv-tech.io/bbx/common/d6d1ba2a-361d-4b37-a4f6-cc2208938d76.webp,
+23,nuoc-hoa,Nước hoa,,https://image.hsv-tech.io/bbx/common/ab95501c-620e-4707-abe7-9efe963c13f5.webp,
+22,dau-goi,Dầu gội,,https://image.hsv-tech.io/bbx/product-categories/c4066332-0a14-46cc-aa0b-7b00ec16608b.webp,
+14,xit-khoang,Xịt khoáng,,https://image.hsv-tech.io/bbx/product-categories/e5d28593-c970-41e2-8549-150b210199d4.webp,
+7,lam-sach,Làm sạch,,,
