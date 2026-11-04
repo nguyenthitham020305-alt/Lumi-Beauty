@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 const MENU = [
-  { to: '/admin', label: 'Tổng quan', icon: LayoutDashboard, end: true },
+  { to: '/admin', label: 'Quản lý và Thống kê', icon: LayoutDashboard, end: true },
   { to: '/admin/san-pham', label: 'Sản phẩm', icon: Package },
   { to: '/admin/don-hang', label: 'Đơn hàng', icon: ShoppingCart },
   { to: '/admin/khach-hang', label: 'Khách hàng', icon: Users },

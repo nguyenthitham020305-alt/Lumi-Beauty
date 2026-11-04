@@ -1,6 +1,7 @@
-import { Heart, Star } from 'lucide-react'
+import { Loader2, ShoppingCartPlus, Star } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatPrice, sizedImage } from '../../lib/format'
+import { useCart } from '../cart/CartContext'
 
 export function RatingStars({ rating, count }) {
   if (rating == null) return <p className="h-4 text-xs text-slate-400">Chưa có đánh giá</p>
@@ -14,6 +15,9 @@ export function RatingStars({ rating, count }) {
 }
 
 export default function ProductCard({ product, onClick }) {
+  const { addToCart, busy } = useCart()
+  const adding = busy === product.id
+
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-card">
       <Link to={`/products/${product.slug}`} onClick={onClick} className="flex flex-1 flex-col">
@@ -49,10 +53,13 @@ export default function ProductCard({ product, onClick }) {
 
       <button
         type="button"
-        aria-label={`Thêm ${product.name} vào yêu thích`}
-        className="absolute top-2 right-2 grid size-8 place-items-center rounded-full bg-white/90 text-slate-400 opacity-0 shadow-sm transition group-hover:opacity-100 hover:text-blush-500 focus-visible:opacity-100"
+        onClick={() => addToCart(product.id)}
+        disabled={!product.in_stock || adding}
+        aria-label={product.in_stock ? `Thêm ${product.name} vào giỏ hàng` : `${product.name} tạm hết hàng`}
+        title={product.in_stock ? 'Thêm vào giỏ hàng' : 'Tạm hết hàng'}
+        className="absolute right-3 bottom-3 grid h-8 w-11 place-items-center rounded-full bg-brand-600 text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
       >
-        <Heart className="size-4" aria-hidden />
+        {adding ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <ShoppingCartPlus className="size-4" aria-hidden />}
       </button>
     </article>
   )
