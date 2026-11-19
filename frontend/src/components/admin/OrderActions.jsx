@@ -1,4 +1,4 @@
-import { Ban, CheckCircle2, CircleDollarSign, PackageCheck, Truck, Undo2, XCircle } from 'lucide-react'
+import { Ban, CheckCircle2, CircleDollarSign, PackageCheck, Undo2, XCircle } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '../../lib/api'
 import { formatPrice } from '../../lib/format'
@@ -7,7 +7,6 @@ import { useToast } from '../ui/Toast'
 
 const STATUS_ACTION = {
   confirmed: { label: 'Xác nhận đơn', icon: CheckCircle2, done: 'Đã xác nhận đơn' },
-  shipping: { label: 'Bắt đầu giao', icon: Truck, done: 'Đơn đã chuyển sang đang giao' },
   delivered: { label: 'Đã giao thành công', icon: PackageCheck, done: 'Đơn đã giao thành công' },
 }
 

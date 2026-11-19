@@ -10,8 +10,8 @@ from ..extensions import db
 from ..models import Order, OrderItem, Payment, Product, User
 
 # Đơn đã huỷ không tính vào doanh thu
-REVENUE_STATUSES = ("pending", "confirmed", "shipping", "delivered")
-ORDER_STATUSES_ALL = ("pending", "confirmed", "shipping", "delivered", "cancelled")
+REVENUE_STATUSES = ("pending", "confirmed", "delivered")
+ORDER_STATUSES_ALL = ("pending", "confirmed", "delivered", "cancelled")
 
 RANGES = ("7d", "30d", "90d", "month", "custom")
 TOP_PRODUCTS_LIMIT = 7       # trần 8 màu của bảng màu; 7 + "khác" là an toàn

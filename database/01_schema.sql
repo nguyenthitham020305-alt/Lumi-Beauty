@@ -229,7 +229,7 @@ CREATE TABLE `orders` (
   `discount_amount`   INT UNSIGNED NOT NULL DEFAULT 0,
   `total_amount`      INT UNSIGNED NOT NULL,        -- subtotal + shipping_fee - discount_amount
 
-  `status`            ENUM('pending','confirmed','shipping','delivered','cancelled')
+  `status`            ENUM('pending','confirmed','delivered','cancelled')
                       NOT NULL DEFAULT 'pending',
 
   -- Thong tin nhan hang duoc CHUP LAI tai thoi diem dat.

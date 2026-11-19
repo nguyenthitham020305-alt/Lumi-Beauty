@@ -65,6 +65,7 @@ export const api = {
   createOrder: (form) => post('/orders', form),
   myOrders: () => request('/orders'),
   order: (code) => request(`/orders/${encodeURIComponent(code)}`),
+  cancelMyOrder: (code, reason) => post(`/orders/${encodeURIComponent(code)}/cancel`, { reason }),
 
   me: () => request('/auth/me'),
   login: (email, password) => post('/auth/login', { email, password }),

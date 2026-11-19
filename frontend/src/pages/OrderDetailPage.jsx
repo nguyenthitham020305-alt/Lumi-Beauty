@@ -1,4 +1,5 @@
 import { CheckCircle2, Copy, MapPin, QrCode } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../components/auth/AuthContext'
 import {
@@ -8,6 +9,7 @@ import {
   PAYMENT_METHOD_LABEL,
   PAYMENT_STATUS_LABEL,
 } from '../components/order/orderLabels'
+import CancelOrder from '../components/order/CancelOrder'
 import PriceSummary from '../components/order/PriceSummary'
 import Breadcrumb from '../components/ui/Breadcrumb'
 import { useToast } from '../components/ui/Toast'
@@ -19,7 +21,7 @@ function StatusSteps({ status }) {
   if (status === 'cancelled') return null
   const current = ORDER_STEPS.findIndex((s) => s.status === status)
   return (
-    <ol className="mt-5 grid grid-cols-4 gap-2" aria-label="Tiến trình đơn hàng">
+    <ol className="mt-5 grid grid-cols-3 gap-2" aria-label="Tiến trình đơn hàng">
       {ORDER_STEPS.map((step, i) => (
         <li key={step.status} className="text-center">
           <span className={`mx-auto block h-1.5 rounded-full ${i <= current ? 'bg-brand-500' : 'bg-slate-200'}`} />
@@ -91,6 +93,9 @@ export default function OrderDetailPage() {
   const { state } = useLocation()
   const { user, loading: authLoading, openAuth } = useAuth()
   const { data, loading, error } = useFetch(() => (user ? api.order(code) : Promise.resolve(null)), [code, user?.id])
+  // useFetch không có refetch nên giữ bản đơn mới nhất do API huỷ trả về
+  const [updated, setUpdated] = useState(null)
+  useEffect(() => setUpdated(null), [code])
 
   if (authLoading || (loading && !data)) return <p className="container-page py-20 text-center text-slate-500">Đang tải đơn hàng...</p>
   if (!user) {
@@ -114,12 +119,12 @@ export default function OrderDetailPage() {
     )
   }
 
-  const order = data.order
+  const order = updated ?? data.order
   return (
     <div className="container-page py-6">
       <Breadcrumb items={[{ label: 'Trang chủ', to: '/' }, { label: 'Đơn hàng của tôi', to: '/orders' }, { label: order.order_code }]} />
 
-      {state?.justPlaced && (
+      {state?.justPlaced && order.status !== 'cancelled' && (
         <div className="mt-4 flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-800" role="status">
           <CheckCircle2 className="size-6 shrink-0" aria-hidden />
           <p>
@@ -141,6 +146,12 @@ export default function OrderDetailPage() {
               </span>
             </div>
             <StatusSteps status={order.status} />
+            {order.status === 'cancelled' && order.cancelled_reason && (
+              <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+                <b className="font-semibold text-slate-700">Lý do huỷ:</b> {order.cancelled_reason}
+              </p>
+            )}
+            <CancelOrder order={order} onUpdated={setUpdated} />
           </section>
 
           {order.transfer_qr && <TransferQr qr={order.transfer_qr} />}

@@ -1,4 +1,3 @@
-import { Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
@@ -93,13 +92,11 @@ function BrandFilter({ category, selected, onChange, idPrefix }) {
  * onChange(patch) — gộp patch vào URL, về trang 1
  */
 export default function ProductFilters({ filters, onChange, idPrefix = 'side' }) {
-  const [keyword, setKeyword] = useState(filters.q ?? '')
   const [minInput, setMinInput] = useState(filters.min_price ?? '')
   const [maxInput, setMaxInput] = useState(filters.max_price ?? '')
   const [priceError, setPriceError] = useState('')
 
-  // Đồng bộ lại khi URL đổi từ bên ngoài (ô tìm kiếm trên header, nút Xoá bộ lọc)
-  useEffect(() => setKeyword(filters.q ?? ''), [filters.q])
+  // Đồng bộ lại khi URL đổi từ bên ngoài (nút Xoá bộ lọc, liên kết từ trang khác)
   useEffect(() => {
     setMinInput(filters.min_price ?? '')
     setMaxInput(filters.max_price ?? '')
@@ -122,32 +119,6 @@ export default function ProductFilters({ filters, onChange, idPrefix = 'side' })
 
   return (
     <div>
-      <FilterGroup title="Tìm kiếm">
-        <form
-          role="search"
-          onSubmit={(e) => {
-            e.preventDefault()
-            onChange({ q: keyword.trim() || undefined })
-          }}
-          className="flex h-10 items-center rounded-full border border-slate-200 pl-4 focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-100"
-        >
-          <label htmlFor={`${idPrefix}-q`} className="sr-only">
-            Tìm trong sản phẩm
-          </label>
-          <input
-            id={`${idPrefix}-q`}
-            type="search"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="Tên sản phẩm, thương hiệu..."
-            className="min-w-0 flex-1 bg-transparent text-sm outline-none"
-          />
-          <button type="submit" aria-label="Tìm" className="grid size-10 place-items-center text-brand-600">
-            <Search className="size-4" aria-hidden />
-          </button>
-        </form>
-      </FilterGroup>
-
       <FilterGroup title="Thương hiệu">
         <BrandFilter category={filters.category} selected={parseBrands(filters.brand)} onChange={onChange} idPrefix={idPrefix} />
       </FilterGroup>

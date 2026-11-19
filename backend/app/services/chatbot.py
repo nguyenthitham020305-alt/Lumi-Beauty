@@ -4,8 +4,8 @@ import time
 from flask import current_app
 from pydantic import BaseModel
 
+from . import chat_context
 from .product_search import DEFAULT_LIMIT, find_candidates, parse_budget
-from .product_search import tokens as search_tokens
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +25,13 @@ SYSTEM_PROMPT = """Bạn là Lumi, chuyên viên tư vấn mỹ phẩm của c�
 - Chọn tối đa 4 sản phẩm phù hợp nhất, ưu tiên sản phẩm còn hàng. Ghi product_id và lý do ngắn (dưới 15 từ).
 - Giá và tình trạng còn hàng phải nói đúng như trong danh sách, không được làm tròn hay suy đoán.
 - Nếu danh sách trống, nói thẳng là chưa tìm được sản phẩm phù hợp và hỏi thêm nhu cầu của khách.
+- Dòng TIÊU CHÍ ĐANG HIỂU là những gì khách đã nêu từ đầu hội thoại, kể cả ở lượt trước. Bám sát nó.
+- Nếu sản phẩm trong danh sách KHÔNG khớp đủ tiêu chí đó, phải nói rõ tiêu chí nào chưa đáp ứng
+  TRƯỚC khi gợi ý, ví dụ: "Lumi chưa có kem chống nắng ghi riêng cho da khô, bạn tham khảo loại
+  cho da nhạy cảm này nhé". Tuyệt đối không lặng lẽ đưa sản phẩm khác loại như thể đã khớp.
+- Phân biệt rõ "chưa có" với "đang hết hàng": nếu trong danh sách CÓ sản phẩm khớp tiêu chí
+  nhưng ghi "hết hàng", phải nói là đang hết hàng (và vẫn được nêu tên nó), không được nói
+  là cửa hàng chưa có loại đó.
 - Nếu chưa đủ thông tin (loại da, vấn đề da, ngân sách...), hỏi lại khách một câu và có thể không gợi ý sản phẩm.
 - Nếu khách hỏi ngoài chủ đề làm đẹp/mỹ phẩm, lịch sự từ chối và hướng về tư vấn mỹ phẩm.
 - Không đưa lời khuyên y khoa; với vấn đề da nghiêm trọng, khuyên khách gặp bác sĩ da liễu."""
@@ -71,7 +78,7 @@ def answer(message, history):
     """Sinh câu trả lời cho khách.
 
     history: list (sender, content) các tin nhắn trước trong phiên, cũ → mới.
-    Trả về (BotAnswer, {product_id: score}).
+    Trả về (BotAnswer, {product_id: score}, danh sách nhãn tiêu chí đang hiểu).
     """
     last_user_msgs = [c for s, c in history if s == "user"][-2:]
 
@@ -79,26 +86,42 @@ def answer(message, history):
     # mới lấy lại mức khách đã nói trước đó (vd "serum dưới 300k" rồi
     # "còn loại nào khác" thì vẫn giữ mốc 300k).
     budget = parse_budget(message)
-    if budget == (None, None) and last_user_msgs:
+    budget_in_message = budget != (None, None)
+    if not budget_in_message and last_user_msgs:
         budget = parse_budget(" ".join(reversed(last_user_msgs)))
 
-    # Tìm theo TIN NHẮN HIỆN TẠI trước. Nếu ghép luôn lịch sử vào, một câu hỏi
-    # lạc đề ("bán máy bay không") vẫn trúng sản phẩm nhờ từ khóa của câu trước,
-    # khiến chatbot gợi ý mỹ phẩm cho câu chẳng liên quan.
-    candidates = find_candidates(message, limit=DEFAULT_LIMIT, budget=budget)
+    # Loại sản phẩm và loại da được giữ qua các lượt y như ngân sách: khách hỏi
+    # "kem chống nắng" rồi nhắn "cho da khô" thì phải tìm KEM CHỐNG NẮNG cho da
+    # khô, chứ không phải mọi thứ hợp da khô.
+    slots, detected_now = chat_context.accumulate(history, message)
+    use_context = chat_context.should_carry(message, detected_now, budget_in_message)
+    if not use_context:
+        # Câu lạc đề ("bán máy bay không") có đủ từ của riêng nó mà không nêu
+        # tiêu chí nào -> bỏ ngữ cảnh cũ, nếu không sẽ gợi ý mỹ phẩm cho nó.
+        slots = {}
 
-    # Chỉ mượn ngữ cảnh cũ cho CÂU NỐI TIẾP: câu hầu như không có từ nội dung
-    # riêng ("loại rẻ hơn", "còn cái nào khác không"). Câu lạc đề thì có đủ từ
-    # của nó, nếu cũng mượn ngữ cảnh sẽ gợi ý mỹ phẩm cho câu chẳng liên quan.
-    if not candidates and last_user_msgs and len(search_tokens(message)) <= 2:
+    candidates = find_candidates(
+        chat_context.build_query(slots, message),
+        limit=DEFAULT_LIMIT,
+        budget=budget,
+        category_hint=chat_context.category_hint(slots),
+    )
+
+    # Lưới an toàn: câu nối tiếp ngắn mà ghép tiêu chí vẫn không ra gì
+    # ("còn cái nào khác không") thì thử ghép thẳng lời khách ở lượt trước.
+    if not candidates and use_context and last_user_msgs:
         candidates = find_candidates(
-            " ".join([*last_user_msgs, message]), limit=DEFAULT_LIMIT, budget=budget
+            " ".join([*last_user_msgs, message]),
+            limit=DEFAULT_LIMIT,
+            budget=budget,
+            category_hint=chat_context.category_hint(slots),
         )
     scores = {p.product_id: s for p, s in candidates}
+    criteria = chat_context.describe(slots, budget if use_context else None)
 
     api_key = current_app.config["GEMINI_API_KEY"]
     if not api_key:
-        return _fallback_answer(candidates), scores
+        return _fallback_answer(candidates), scores, criteria
 
     from google import genai
     from google.genai import types
@@ -111,7 +134,11 @@ def answer(message, history):
     contents.append(
         types.Content(
             role="user",
-            parts=[types.Part(text=f"DANH SÁCH SẢN PHẨM:\n{context}\n\nCÂU HỎI CỦA KHÁCH: {message}")],
+            parts=[types.Part(text=(
+                f"TIÊU CHÍ ĐANG HIỂU: {' · '.join(criteria) if criteria else '(chưa rõ)'}\n\n"
+                f"DANH SÁCH SẢN PHẨM:\n{context}\n\n"
+                f"CÂU HỎI CỦA KHÁCH: {message}"
+            ))],
         )
     )
 
@@ -143,11 +170,11 @@ def answer(message, history):
                 time.sleep(RETRY_DELAY_SEC)
                 continue
             log.warning("Gemini không trả lời được (%s), dùng câu trả lời dự phòng", type(e).__name__)
-            return _fallback_answer(candidates), scores
+            return _fallback_answer(candidates), scores, criteria
 
     if result is None:
-        return _fallback_answer(candidates), scores
+        return _fallback_answer(candidates), scores, criteria
 
     # Gemini có thể trả id ngoài danh sách ngữ cảnh; bỏ đi để không hiện sản phẩm bịa
     result.recommendations = [r for r in result.recommendations if r.product_id in scores][:MAX_RECOMMENDATIONS]
-    return result, scores
+    return result, scores, criteria

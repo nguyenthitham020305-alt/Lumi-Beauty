@@ -1,26 +1,23 @@
 """Quy tắc chuyển trạng thái đơn hàng / thanh toán phía quản trị."""
 from datetime import datetime
 
-from ..models import Product
-from .orders import order_payload
+# OrderRuleError / restock_order định nghĩa ở services.orders để khách và admin
+# dùng chung một bộ quy tắc; routes.admin vẫn import OrderRuleError từ đây.
+from .orders import OrderRuleError, order_payload, restock_order
 
 CANCEL_REASON_MAX = 255
 DEFAULT_CANCEL_REASON = "Quản trị viên huỷ đơn"
 
-# Đã giao / Đã huỷ là trạng thái cuối, không đổi được nữa
+# Shop tự giao, không nối đơn vị vận chuyển nên bỏ bước "Đang giao":
+# Chờ xác nhận -> Đã xác nhận -> Đã giao. Đã giao / Đã huỷ là trạng thái cuối.
 ORDER_TRANSITIONS = {
     "pending": ("confirmed", "cancelled"),
-    "confirmed": ("shipping", "cancelled"),
-    "shipping": ("delivered", "cancelled"),
+    "confirmed": ("delivered", "cancelled"),
     "delivered": (),
     "cancelled": (),
 }
 
-SHIPMENT_STATUS_FOR = {"confirmed": "pending", "shipping": "in_transit", "delivered": "delivered"}
-
-
-class OrderRuleError(Exception):
-    """Thao tác vi phạm quy tắc nghiệp vụ; message hiển thị thẳng cho admin."""
+SHIPMENT_STATUS_FOR = {"confirmed": "pending", "delivered": "delivered"}
 
 
 def next_order_statuses(order):
@@ -41,21 +38,6 @@ def next_payment_statuses(order):
     return {"pending": ["paid", "failed"], "failed": ["paid"]}.get(payment.status, [])
 
 
-def _restock(order):
-    products = {
-        p.product_id: p
-        for p in Product.query.filter(Product.product_id.in_([i.product_id for i in order.items if i.product_id])).with_for_update()
-    }
-    for item in order.items:
-        product = products.get(item.product_id)
-        if product is None:  # sản phẩm đã bị xoá khỏi catalog
-            continue
-        product.stock += item.quantity
-        product.sold_count = max(0, product.sold_count - item.quantity)
-        if product.status == "out_of_stock":
-            product.status = "active"
-
-
 def change_order_status(order, new_status, reason=None):
     if new_status not in next_order_statuses(order):
         if new_status == "confirmed" and "confirmed" in ORDER_TRANSITIONS[order.status]:
@@ -68,9 +50,7 @@ def change_order_status(order, new_status, reason=None):
         if len(reason) > CANCEL_REASON_MAX:
             raise OrderRuleError(f"Lý do huỷ tối đa {CANCEL_REASON_MAX} ký tự")
         order.cancelled_reason = reason or DEFAULT_CANCEL_REASON
-        _restock(order)
-        if shipment and order.status == "shipping":
-            shipment.status = "failed"
+        restock_order(order)
     else:
         if shipment:
             shipment.status = SHIPMENT_STATUS_FOR[new_status]

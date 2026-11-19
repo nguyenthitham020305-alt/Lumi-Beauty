@@ -14,7 +14,7 @@ import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
 import { formatPrice } from '../../lib/format'
 
-const STATUS_TABS = ['', 'pending', 'confirmed', 'shipping', 'delivered', 'cancelled']
+const STATUS_TABS = ['', 'pending', 'confirmed', 'delivered', 'cancelled']
 const SEARCH_DEBOUNCE_MS = 400
 
 const selectClass =

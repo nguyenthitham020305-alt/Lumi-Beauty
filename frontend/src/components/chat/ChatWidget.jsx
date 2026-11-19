@@ -4,28 +4,13 @@ import { Link } from 'react-router-dom'
 import { api } from '../../lib/api'
 import { formatPrice, sizedImage } from '../../lib/format'
 import { SAMPLE_QUESTIONS } from '../home/AiPromo'
+import { useAuth } from '../auth/AuthContext'
+import { readSession, saveSession, sessionForUser } from './chatSession'
 import { useChat } from './ChatContext'
 
-const SESSION_KEY = 'lumi_chat_session'
 const WELCOME = {
   sender: 'bot',
   content: 'Chào bạn! Mình là Lumi, trợ lý làm đẹp của LUMI Beauty. Bạn đang tìm sản phẩm gì, hoặc làn da bạn đang gặp vấn đề gì?',
-}
-
-function readSession() {
-  try {
-    return JSON.parse(sessionStorage.getItem(SESSION_KEY)) ?? { id: null, messages: [] }
-  } catch {
-    return { id: null, messages: [] }
-  }
-}
-
-function saveSession(session) {
-  try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
-  } catch {
-    // Trình duyệt chặn storage: chat vẫn chạy, chỉ mất lịch sử khi tải lại trang
-  }
 }
 
 function RecommendedProduct({ product }) {
@@ -38,7 +23,12 @@ function RecommendedProduct({ product }) {
       <img src={sizedImage(product.image, 150)} alt="" className="size-16 shrink-0 rounded-lg object-contain" />
       <span className="min-w-0 text-xs">
         <span className="line-clamp-2 font-medium text-slate-700">{product.name}</span>
-        <span className="mt-0.5 block font-bold text-blush-600">{formatPrice(product.price)}</span>
+        <span className="mt-0.5 flex items-center gap-1.5">
+          <span className="font-bold text-blush-600">{formatPrice(product.price)}</span>
+          {product.stock <= 0 && (
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-medium text-slate-500">Hết hàng</span>
+          )}
+        </span>
         {product.reason && <span className="mt-0.5 line-clamp-1 block text-brand-600">✓ {product.reason}</span>}
       </span>
     </Link>
@@ -47,6 +37,7 @@ function RecommendedProduct({ product }) {
 
 export default function ChatWidget() {
   const { isOpen, setIsOpen, pendingQuestion, clearPendingQuestion } = useChat()
+  const { user, loading: authLoading } = useAuth()
   const [session, setSession] = useState(readSession)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -56,6 +47,19 @@ export default function ChatWidget() {
   const messages = [WELCOME, ...session.messages]
 
   useEffect(() => saveSession(session), [session])
+
+  // Hội thoại nằm trong sessionStorage của TRÌNH DUYỆT nên không tự mất khi đổi
+  // tài khoản: người đăng nhập sau vẫn đọc được hội thoại của người trước trên
+  // cùng một máy. Máy chủ đã chặn đọc/ghi chéo phiên, nhưng phần hiển thị thì
+  // chưa — nên phải tự xoá ở đây.
+  //
+  // Khách vãng lai rồi mới đăng nhập (chủ đang là null) thì GIỮ, vì máy chủ gắn
+  // luôn phiên chat đó cho tài khoản vừa đăng nhập.
+  useEffect(() => {
+    if (authLoading) return
+    const id = user?.id ?? null
+    setSession((s) => sessionForUser(s, id))
+  }, [user?.id, authLoading])
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
@@ -78,7 +82,9 @@ export default function ChatWidget() {
       try {
         const res = await api.chat(message, session.id)
         setSession((s) => ({
+          ...s,
           id: res.session_id,
+          context: res.context ?? [],
           messages: [...s.messages, { sender: 'bot', content: res.reply, products: res.products }],
         }))
       } catch (err) {
@@ -176,6 +182,17 @@ export default function ChatWidget() {
               </div>
             )}
           </div>
+
+          {session.context?.length > 0 && (
+            <p className="flex flex-wrap items-center gap-1.5 border-t border-slate-100 bg-white px-3 pt-2 text-xs">
+              <span className="text-slate-400">Lumi đang tìm:</span>
+              {session.context.map((c) => (
+                <span key={c} className="rounded-full bg-brand-50 px-2 py-0.5 font-medium text-brand-700">
+                  {c}
+                </span>
+              ))}
+            </p>
+          )}
 
           <form
             onSubmit={(e) => {

@@ -231,7 +231,7 @@ class Ward(db.Model):
         return {"code": self.ward_code, "name": self.name}
 
 
-ORDER_STATUSES = ("pending", "confirmed", "shipping", "delivered", "cancelled")
+ORDER_STATUSES = ("pending", "confirmed", "delivered", "cancelled")
 
 
 class Order(db.Model):

@@ -29,7 +29,6 @@ export const AXIS_TEXT = '#64748b'
 export const STATUS_COLOR = {
   pending: '#4bb39b',
   confirmed: '#2a9782',
-  shipping: '#127a6a',
   delivered: '#116257',
   cancelled: '#94a3b8',
 }

@@ -150,13 +150,6 @@ export default function ProductDetailPage() {
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="text-3xl font-bold text-blush-600">{formatPrice(product.price)}</span>
             </div>
-            {product.variant_count > 1 && (
-              <p className="mt-2 text-sm text-slate-500">
-                Có {product.variant_count} phân loại
-                {product.price_min !== product.price_max &&
-                  `, giá từ ${formatPrice(product.price_min)} đến ${formatPrice(product.price_max)}`}
-              </p>
-            )}
           </div>
 
           <p className={`mt-5 text-sm font-medium ${purchasable ? 'text-brand-700' : 'text-blush-600'}`}>

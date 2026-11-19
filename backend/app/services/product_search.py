@@ -40,7 +40,12 @@ def strip_accents(text):
 
 # Từ đệm không mang thông tin sản phẩm. Viết KHÔNG DẤU vì tokens() đã bỏ dấu.
 # Cố ý KHÔNG đưa vào: "da" (da mặt), "nen" (kem nền), "goi" (dầu gội),
-# "tam" (sữa tắm), "sua" (sữa rửa mặt) — chúng là từ khóa sản phẩm thật.
+# "tam" (sữa tắm), "sua" (sữa rửa mặt), "dau" (da dầu, dầu gội, dầu tẩy trang)
+# — chúng là từ khóa sản phẩm thật.
+#
+# CẢNH BÁO khi thêm từ mới: danh sách này so khớp trên chuỗi ĐÃ BỎ DẤU nên hai
+# từ khác nghĩa có thể trùng nhau. "đâu" (ở đâu) và "dầu" (da dầu) đều thành
+# "dau"; từng loại bỏ "dau" làm mọi câu hỏi "da dầu" bị tìm thành "da".
 STOPWORDS = {
     "toi", "minh", "em", "anh", "chi", "ban", "shop", "oi", "nhe", "nha", "voi", "cho",
     "la", "va", "cua", "nao", "gi", "khong", "ko", "muon", "can", "tim", "giup", "duoc",
@@ -48,7 +53,7 @@ STOPWORDS = {
     "nay", "do", "san", "pham", "tu", "van", "y",
     "duoi", "tren", "khoang", "gia", "tien", "ngan", "sach", "re", "dat",
     # từ đệm của câu nối tiếp: "còn cái nào khác không", "loại nào tốt hơn"
-    "con", "cai", "khac", "hon", "nua", "them", "tot", "co", "the", "o", "dau", "bao", "nhieu",
+    "con", "cai", "khac", "hon", "nua", "them", "tot", "co", "the", "o", "bao", "nhieu",
 }
 
 _TOKEN_RE = re.compile(r"\w+", re.UNICODE)
@@ -124,7 +129,7 @@ def _escape_like(text):
     return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def find_candidates(query, limit=DEFAULT_LIMIT, in_stock_only=False, budget=None):
+def find_candidates(query, limit=DEFAULT_LIMIT, in_stock_only=False, budget=None, category_hint=None):
     """Trả về list (Product, score 0..1) xếp giảm dần theo độ liên quan.
 
     Mỗi lần gọi là một câu SELECT mới -> giá, tồn kho, sản phẩm mới luôn đúng.
@@ -133,6 +138,11 @@ def find_candidates(query, limit=DEFAULT_LIMIT, in_stock_only=False, budget=None
     ngân sách ở tin nhắn nào — nếu để hàm này tự bóc từ `query` đã ghép cả
     lịch sử, regex sẽ bắt trúng con số của tin nhắn CŨ ("dưới 50k") và lọc sai
     cho câu hỏi mới ("dưới 200k").
+
+    category_hint: tên các danh mục khách đang thực sự hỏi. Sản phẩm thuộc
+    danh mục đó được xếp lên trước — KHÔNG loại bỏ sản phẩm khác, chỉ đổi thứ
+    tự. Cần thiết vì khớp theo từ dễ nhầm: "Kem Chống Nắng ... Anti-Acnes
+    Serum" có chữ "Serum" trong tên nên vẫn trúng khi khách hỏi serum.
     """
     words = tokens(query)[:MAX_TOKENS]
     min_price, max_price = budget if budget is not None else parse_budget(query)
@@ -191,6 +201,7 @@ def find_candidates(query, limit=DEFAULT_LIMIT, in_stock_only=False, budget=None
         # Chỉ lọc theo giá: DB đã sắp theo còn hàng + độ phổ biến
         return [(p, 1.0) for p in rows[:limit]]
 
+    hint = {c.lower() for c in (category_hint or ())}
     q_set, q_bigrams = set(words), _bigrams(words)
     max_score = len(q_set) + 2 * len(q_bigrams)
 
@@ -210,9 +221,10 @@ def find_candidates(query, limit=DEFAULT_LIMIT, in_stock_only=False, budget=None
             continue
         score = len(hits) + 2 * len(q_bigrams & _bigrams(words_p))
         if score:
-            scored.append((score, p.stock > 0, p.review_count, p))
+            in_hint = bool(hint) and any(c.name.lower() in hint for c in p.categories)
+            scored.append((in_hint, score, p.stock > 0, p.review_count, p))
 
     if not scored:
         return []
-    scored.sort(key=lambda x: (x[0], x[1], x[2]), reverse=True)
-    return [(p, round(s / max_score, 4)) for s, _, _, p in scored[:limit]]
+    scored.sort(key=lambda x: (x[0], x[1], x[2], x[3]), reverse=True)
+    return [(p, round(s / max_score, 4)) for _, s, _, _, p in scored[:limit]]

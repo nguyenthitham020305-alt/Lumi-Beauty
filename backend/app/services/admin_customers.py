@@ -8,7 +8,7 @@ from ..extensions import db
 from ..models import Order, User
 
 # Đơn đã huỷ không tính vào tổng chi tiêu
-SPENDING_STATUSES = ("pending", "confirmed", "shipping", "delivered")
+SPENDING_STATUSES = ("pending", "confirmed", "delivered")
 
 
 class CustomerRuleError(Exception):

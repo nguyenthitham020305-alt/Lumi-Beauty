@@ -6,11 +6,18 @@ from flask import current_app
 from sqlalchemy import func
 
 from ..extensions import db
-from ..models import Order, Province, Ward
+from ..models import Order, Product, Province, Ward
 from .auth import EMAIL_RE, PHONE_RE
 
 PAYMENT_METHODS = ("cod", "bank_transfer")
 NOTE_MAX = 500
+CANCEL_REASON_MAX = 255
+CUSTOMER_CANCEL_DEFAULT = "Khách hàng tự huỷ đơn"
+CUSTOMER_CANCEL_PREFIX = "Khách huỷ: "
+
+
+class OrderRuleError(Exception):
+    """Thao tác vi phạm quy tắc nghiệp vụ; message hiển thị thẳng cho người dùng."""
 
 
 def shipping_fee_for(subtotal):
@@ -118,6 +125,7 @@ def order_payload(order, with_items=True):
         "order_code": order.order_code,
         "order_date": order.order_date.isoformat() if order.order_date else None,
         "status": order.status,
+        "can_cancel": can_customer_cancel(order),
         "subtotal": order.subtotal,
         "discount_amount": order.discount_amount,
         "shipping_fee": order.shipping_fee,
@@ -164,3 +172,50 @@ def order_payload(order, with_items=True):
     if payment and payment.method == "bank_transfer" and payment.status == "pending" and order.status != "cancelled":
         data["transfer_qr"] = transfer_qr(order)
     return data
+
+
+def restock_order(order):
+    """Hoàn tồn kho cho đơn bị huỷ. Dùng chung cho admin huỷ và khách tự huỷ."""
+    product_ids = [i.product_id for i in order.items if i.product_id]
+    products = (
+        {p.product_id: p for p in Product.query.filter(Product.product_id.in_(product_ids)).with_for_update()}
+        if product_ids
+        else {}
+    )
+    for item in order.items:
+        product = products.get(item.product_id)
+        if product is None:  # sản phẩm đã bị xoá khỏi catalog
+            continue
+        product.stock += item.quantity
+        product.sold_count = max(0, product.sold_count - item.quantity)
+        if product.status == "out_of_stock":
+            product.status = "active"
+
+
+def can_customer_cancel(order):
+    """Khách chỉ tự huỷ được khi đơn còn chờ xác nhận và chưa ghi nhận thanh toán.
+
+    Đơn đã xác nhận trở đi phải liên hệ admin; đơn đã trả tiền cần người thật xử lý hoàn tiền.
+    """
+    if order.status != "pending":
+        return False
+    return not (order.payment and order.payment.status == "paid")
+
+
+def cancel_order_by_customer(order, reason=None):
+    """Khách tự huỷ đơn. Quy tắc đặt ở server để frontend không tự suy diễn."""
+    if order.status == "cancelled":
+        raise OrderRuleError("Đơn hàng đã được huỷ trước đó")
+    if order.status != "pending":
+        raise OrderRuleError("Đơn hàng đã được xác nhận, vui lòng liên hệ LUMI Beauty để được hỗ trợ huỷ đơn")
+    if not can_customer_cancel(order):
+        raise OrderRuleError("Đơn hàng đã ghi nhận thanh toán, vui lòng liên hệ LUMI Beauty để được hỗ trợ hoàn tiền")
+
+    reason = (reason or "").strip()
+    text = CUSTOMER_CANCEL_PREFIX + reason if reason else CUSTOMER_CANCEL_DEFAULT
+    if len(text) > CANCEL_REASON_MAX:
+        raise OrderRuleError(f"Lý do huỷ quá dài, tối đa {CANCEL_REASON_MAX - len(CUSTOMER_CANCEL_PREFIX)} ký tự")
+
+    order.cancelled_reason = text
+    restock_order(order)
+    order.status = "cancelled"

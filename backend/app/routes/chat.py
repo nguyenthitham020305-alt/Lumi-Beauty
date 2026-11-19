@@ -119,7 +119,7 @@ def send_message():
             .all()
         ][::-1]
 
-        result, scores = chatbot.answer(message, history)
+        result, scores, criteria = chatbot.answer(message, history)
 
         db.session.add(ChatMessage(session_id=session.session_id, sender="user", content=message))
         bot_message = ChatMessage(session_id=session.session_id, sender="bot", content=result.reply)
@@ -161,7 +161,14 @@ def send_message():
         log.exception("Lỗi CSDL khi xử lý tin nhắn chat")
         return {"error": "Hệ thống đang bận, bạn thử lại sau ít phút nhé."}, 503
 
-    return {"session_id": session.session_id, "reply": result.reply, "products": cards}
+    # "context" = tiêu chí chatbot đang hiểu (loại sản phẩm, loại da, ngân sách).
+    # Hiện lên khung chat để khách biết bot hiểu gì mà sửa lại khi bot hiểu sai.
+    return {
+        "session_id": session.session_id,
+        "reply": result.reply,
+        "products": cards,
+        "context": criteria,
+    }
 
 
 @chat_bp.post("/chat/recommendations/<int:reco_id>/click")
