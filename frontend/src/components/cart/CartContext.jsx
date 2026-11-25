@@ -18,6 +18,8 @@ export function CartProvider({ children }) {
   const [busy, setBusy] = useState(null)
   // Khách bấm "Tiến hành đặt hàng" khi chưa đăng nhập: đăng nhập xong thì đi tiếp
   const checkoutAfterLogin = useRef(false)
+  // Tương tự cho nút "Thêm vào giỏ": nhớ sản phẩm đang định thêm
+  const addAfterLogin = useRef(null)
 
   const openCart = useCallback(() => setIsOpen(true), [])
   const closeCart = useCallback(() => setIsOpen(false), [])
@@ -48,6 +50,13 @@ export function CartProvider({ children }) {
 
   const addToCart = useCallback(
     async (productId, quantity = 1) => {
+      // Giỏ hàng luôn gắn với một tài khoản: chưa đăng nhập thì mời đăng nhập
+      // trước, rồi tự thêm giúp để khách không phải bấm lại.
+      if (!user) {
+        addAfterLogin.current = { productId, quantity }
+        openAuth('login')
+        return false
+      }
       const ok = await run(productId, () => api.addToCart(productId, quantity))
       if (ok) {
         toast(`Đã thêm ${quantity} sản phẩm vào giỏ hàng`)
@@ -55,7 +64,7 @@ export function CartProvider({ children }) {
       }
       return ok
     },
-    [run, toast],
+    [run, toast, user, openAuth],
   )
 
   const updateQuantity = (productId, quantity) => run(productId, () => api.updateCartItem(productId, { quantity }))
@@ -93,9 +102,20 @@ export function CartProvider({ children }) {
     }
   }, [user, goToCheckout])
 
-  // Đóng modal mà không đăng nhập thì huỷ ý định đặt hàng đang chờ
   useEffect(() => {
-    if (!modalMode && !user) checkoutAfterLogin.current = false
+    if (user && addAfterLogin.current) {
+      const { productId, quantity } = addAfterLogin.current
+      addAfterLogin.current = null
+      addToCart(productId, quantity)
+    }
+  }, [user, addToCart])
+
+  // Đóng modal mà không đăng nhập thì huỷ các ý định đang chờ
+  useEffect(() => {
+    if (!modalMode && !user) {
+      checkoutAfterLogin.current = false
+      addAfterLogin.current = null
+    }
   }, [modalMode, user])
 
   const value = {

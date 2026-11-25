@@ -1,4 +1,4 @@
-import { Banknote, Loader2, LogIn, MapPin, Pencil, QrCode, ShoppingBag, Trash2 } from 'lucide-react'
+import { Banknote, Loader2, LogIn, MapPin, Pencil, ShoppingBag, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../components/auth/AuthContext'
@@ -12,21 +12,6 @@ import { useFetch } from '../hooks/useFetch'
 import { api } from '../lib/api'
 import { formatPrice, sizedImage } from '../lib/format'
 import { EMAIL_RE, normalizePhone, PHONE_RE } from '../lib/validation'
-
-const PAYMENT_OPTIONS = [
-  {
-    value: 'cod',
-    icon: Banknote,
-    title: 'Thanh toán khi nhận hàng (COD)',
-    text: 'Trả tiền mặt cho nhân viên giao hàng.',
-  },
-  {
-    value: 'bank_transfer',
-    icon: QrCode,
-    title: 'Chuyển khoản qua mã QR',
-    text: 'Quét mã VietQR bằng app ngân hàng bất kỳ.',
-  },
-]
 
 function validate(form) {
   const errors = {}
@@ -121,7 +106,6 @@ function CheckoutForm({ user }) {
     ward_code: '',
     street_address: '',
     note: '',
-    payment_method: 'cod',
   })
   const [errors, setErrors] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -319,38 +303,19 @@ function CheckoutForm({ user }) {
             )}
           </Section>
 
+          {/* Chỉ có một phương thức nên không bắt khách chọn, chỉ báo cho biết */}
           <Section title="Phương thức thanh toán">
-            <div className="grid gap-3" role="radiogroup" aria-label="Phương thức thanh toán">
-              {PAYMENT_OPTIONS.map(({ value, icon: Icon, title, text }) => {
-                const active = form.payment_method === value
-                return (
-                  <label
-                    key={value}
-                    className={`flex cursor-pointer items-center gap-4 rounded-2xl border-2 p-4 transition ${
-                      active ? 'border-brand-500 bg-brand-50/60' : 'border-slate-100 hover:border-brand-200'
-                    }`}
-                  >
-                    <input type="radio" name="payment_method" value={value} checked={active} onChange={set('payment_method')} className="size-4.5 accent-brand-600" />
-                    <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${active ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                      <Icon className="size-5" aria-hidden />
-                    </span>
-                    <span>
-                      <span className="block text-sm font-semibold text-slate-800">{title}</span>
-                      <span className="block text-xs text-slate-500">{text}</span>
-                    </span>
-                  </label>
-                )
-              })}
+            <div className="flex items-center gap-4 rounded-2xl border-2 border-brand-200 bg-brand-50/60 p-4">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-white">
+                <Banknote className="size-5" aria-hidden />
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-slate-800">Thanh toán khi nhận hàng (COD)</span>
+                <span className="block text-xs text-slate-500">
+                  Trả {formatPrice(summary.total_amount)} bằng tiền mặt cho nhân viên giao hàng.
+                </span>
+              </span>
             </div>
-            {form.payment_method === 'bank_transfer' && (
-              <div className="mt-4 flex gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800">
-                <QrCode className="size-5 shrink-0" aria-hidden />
-                <p>
-                  Sau khi bấm <b>Đặt hàng</b>, mã QR chuyển khoản <b>{formatPrice(summary.total_amount)}</b> sẽ hiện ngay, với nội dung là mã đơn để
-                  LUMI đối soát. Đơn được xác nhận khi LUMI nhận được tiền.
-                </p>
-              </div>
-            )}
           </Section>
         </div>
 

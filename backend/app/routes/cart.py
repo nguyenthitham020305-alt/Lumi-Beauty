@@ -30,11 +30,13 @@ def _respond(cart, status=200):
 
 @cart_bp.get("")
 def get_cart():
-    """Khách chưa đăng nhập cũng có giỏ (lưu theo session cookie)."""
+    """Để mở cho khách chưa đăng nhập: trả về giỏ rỗng thay vì lỗi 401,
+    nhờ vậy badge giỏ hàng trên đầu trang không phải xử lý trường hợp lỗi."""
     return cart_payload(find_cart(current_user()))
 
 
 @cart_bp.post("/items")
+@login_required
 def add_item():
     """Body: {product_id, quantity}. Sản phẩm đã có trong giỏ thì cộng dồn số lượng."""
     data = request.get_json(silent=True) or {}
@@ -68,6 +70,7 @@ def add_item():
 
 
 @cart_bp.patch("/items/<int:product_id>")
+@login_required
 def update_item(product_id):
     """Body: {quantity?, selected?} — đổi số lượng và/hoặc tick chọn."""
     data = request.get_json(silent=True) or {}
@@ -91,6 +94,7 @@ def update_item(product_id):
 
 
 @cart_bp.patch("/select-all")
+@login_required
 def select_all():
     """Body: {selected: bool} — tick/bỏ tick mọi sản phẩm."""
     selected = (request.get_json(silent=True) or {}).get("selected")
@@ -104,6 +108,7 @@ def select_all():
 
 
 @cart_bp.delete("/items/<int:product_id>")
+@login_required
 def remove_item(product_id):
     cart, item = _find_item(product_id)
     if item is not None:

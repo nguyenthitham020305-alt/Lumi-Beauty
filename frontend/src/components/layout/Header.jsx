@@ -1,4 +1,4 @@
-import { Heart, Search, ShoppingBag } from 'lucide-react'
+import { Search, ShoppingBag } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../cart/CartContext'
@@ -58,9 +58,6 @@ export default function Header() {
 
       <nav aria-label="Tài khoản" className="flex shrink-0 items-center gap-1 md:gap-3">
         <AccountMenu />
-        <Link to="/yeu-thich" aria-label="Sản phẩm yêu thích" className="hidden rounded-full p-2 hover:bg-brand-50 md:block">
-          <Heart className="size-6 text-brand-600" aria-hidden />
-        </Link>
         <button type="button" onClick={openCart} aria-label={`Mở giỏ hàng, ${cartCount} sản phẩm`} className="relative rounded-full p-2 hover:bg-brand-50">
           <ShoppingBag className="size-6 text-brand-600" aria-hidden />
           <span className="absolute top-0.5 right-0.5 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-blush-500 px-1 text-[10px] font-bold text-white">

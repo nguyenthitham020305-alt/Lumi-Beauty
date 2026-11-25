@@ -231,7 +231,9 @@ class Ward(db.Model):
         return {"code": self.ward_code, "name": self.name}
 
 
-ORDER_STATUSES = ("pending", "confirmed", "delivered", "cancelled")
+# Khách đặt xong là "pending"; admin bấm Hoàn tất là "completed". Không còn
+# bước trung gian nào vì cửa hàng tự giao và thu tiền khi giao.
+ORDER_STATUSES = ("pending", "completed")
 
 
 class Order(db.Model):
@@ -256,12 +258,10 @@ class Order(db.Model):
     street_address = db.Column(db.String(255))
     shipping_address = db.Column(db.String(500), nullable=False)
     note = db.Column(db.String(500))
-    cancelled_reason = db.Column(db.String(255))
 
     user = db.relationship("User", lazy="select")
     items = db.relationship("OrderItem", order_by="OrderItem.order_item_id", lazy="select")
     payment = db.relationship("Payment", uselist=False, lazy="joined")
-    shipment = db.relationship("Shipment", uselist=False, lazy="joined")
 
 
 class OrderItem(db.Model):
@@ -286,25 +286,11 @@ class Payment(db.Model):
 
     payment_id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey("orders.order_id"), nullable=False, unique=True)
-    # bank_transfer = chuyển khoản qua mã VietQR
-    method = db.Column(db.Enum("cod", "bank_transfer", "momo", "vnpay"), nullable=False, default="cod")
+    # Chỉ thu tiền khi giao hàng (COD), nên khách không phải chọn phương thức
+    method = db.Column(db.Enum("cod"), nullable=False, default="cod")
     amount = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.Enum("pending", "paid", "failed", "refunded"), nullable=False, default="pending")
-    transaction_code = db.Column(db.String(100))
+    status = db.Column(db.Enum("pending", "paid"), nullable=False, default="pending")
     paid_at = db.Column(db.DateTime)
-
-
-class Shipment(db.Model):
-    __tablename__ = "shipments"
-
-    shipping_id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey("orders.order_id"), nullable=False, unique=True)
-    method = db.Column(db.Enum("standard", "express"), nullable=False, default="standard")
-    shipping_fee = db.Column(db.Integer, nullable=False, default=0)
-    status = db.Column(
-        db.Enum("pending", "picked_up", "in_transit", "delivered", "failed"), nullable=False, default="pending"
-    )
-    tracking_code = db.Column(db.String(100))
 
 
 class Cart(db.Model):
@@ -340,7 +326,6 @@ class ChatSession(db.Model):
     session_id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer)  # NULL = khách chưa đăng nhập
     started_at = db.Column(db.TIMESTAMP, server_default=db.func.current_timestamp())
-    ended_at = db.Column(db.DateTime)
 
 
 class ChatMessage(db.Model):

@@ -15,14 +15,6 @@ import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
 import { formatPrice, sizedImage } from '../../lib/format'
 
-const SHIPMENT_STATUS_LABEL = {
-  pending: 'Chờ lấy hàng',
-  picked_up: 'Đã lấy hàng',
-  in_transit: 'Đang vận chuyển',
-  delivered: 'Đã giao',
-  failed: 'Giao thất bại',
-}
-
 function StatusSteps({ status }) {
   const current = ORDER_STEPS.findIndex((s) => s.status === status)
   return (
@@ -93,21 +85,11 @@ export default function AdminOrderDetailPage() {
         <div className="min-w-0 space-y-5">
           <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
             <h2 className="font-semibold text-slate-900">Cập nhật trạng thái</h2>
-            {order.status === 'cancelled' ? (
-              <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-                Đơn đã huỷ{order.cancelled_reason ? ` — Lý do: ${order.cancelled_reason}` : ''}
-              </p>
-            ) : (
-              <StatusSteps status={order.status} />
-            )}
-            {payment.method === 'bank_transfer' && payment.status !== 'paid' && order.status === 'pending' && (
-              <p className="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-700">
-                Đơn chuyển khoản QR: kiểm tra tài khoản ngân hàng với nội dung "LUMI {order.order_code}", bấm "Đã nhận tiền" rồi mới xác nhận đơn.
-              </p>
-            )}
-            {payment.method === 'cod' && order.status !== 'cancelled' && payment.status !== 'paid' && (
+            <StatusSteps status={order.status} />
+            {payment.status !== 'paid' && (
               <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
-                Đơn COD sẽ tự chuyển sang "Đã thanh toán" khi đánh dấu giao thành công.
+                Bấm "Hoàn tất đơn hàng" khi đã giao tới khách và thu đủ tiền. Khoản thanh toán sẽ
+                tự chuyển sang "Đã thanh toán".
               </p>
             )}
             <div className="mt-4">
@@ -148,9 +130,6 @@ export default function AdminOrderDetailPage() {
             <p className="text-sm text-slate-600">{order.recipient.phone}</p>
             <p className="text-sm break-all text-slate-600">{order.recipient.email}</p>
             <p className="mt-1 text-sm text-slate-600">{order.recipient.address}</p>
-            {order.shipment_status && (
-              <p className="mt-2 text-xs text-slate-500">Vận chuyển: {SHIPMENT_STATUS_LABEL[order.shipment_status]}</p>
-            )}
             {order.note && <p className="mt-2 rounded-lg bg-slate-50 p-2 text-xs text-slate-500">Ghi chú: {order.note}</p>}
           </Card>
 

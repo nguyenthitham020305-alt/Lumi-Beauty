@@ -21,6 +21,7 @@ import ComingSoonPage from './pages/ComingSoonPage'
 import HomePage from './pages/HomePage'
 import OrderDetailPage from './pages/OrderDetailPage'
 import OrdersPage from './pages/OrdersPage'
+import ProfilePage from './pages/ProfilePage'
 import ProductDetailPage from './pages/ProductDetailPage'
 import ProductListPage from './pages/ProductListPage'
 
@@ -37,6 +38,7 @@ export default function App() {
                   <Route path="products" element={<ProductListPage />} />
                   <Route path="products/:slug" element={<ProductDetailPage />} />
                   <Route path="checkout" element={<CheckoutPage />} />
+                  <Route path="tai-khoan" element={<ProfilePage />} />
                   <Route path="orders" element={<OrdersPage />} />
                   <Route path="orders/:code" element={<OrderDetailPage />} />
 

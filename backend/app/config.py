@@ -29,11 +29,6 @@ class Config:
     SHIPPING_FEE = int(os.getenv("SHIPPING_FEE", "30000"))
     FREE_SHIPPING_THRESHOLD = int(os.getenv("FREE_SHIPPING_THRESHOLD", "499000"))
 
-    BANK_BIN = os.getenv("BANK_BIN", "")
-    BANK_NAME = os.getenv("BANK_NAME", "")
-    BANK_ACCOUNT_NO = os.getenv("BANK_ACCOUNT_NO", "")
-    BANK_ACCOUNT_NAME = os.getenv("BANK_ACCOUNT_NAME", "")
-
     ADDRESS_SOURCE_URL = os.getenv("ADDRESS_SOURCE_URL", "https://provinces.open-api.vn/api/v2/?depth=2")
 
     CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")]

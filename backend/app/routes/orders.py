@@ -2,17 +2,10 @@ from flask import Blueprint, request
 from sqlalchemy.exc import IntegrityError
 
 from ..extensions import db
-from ..models import CartItem, Order, OrderItem, Payment, Product, Province, Shipment, Ward
+from ..models import CartItem, Order, OrderItem, Payment, Product, Province, Ward
 from ..services.auth import current_user, login_required
 from ..services.cart import cart_payload, find_cart
-from ..services.orders import (
-    OrderRuleError,
-    cancel_order_by_customer,
-    next_order_code,
-    order_payload,
-    price_summary,
-    validate_checkout,
-)
+from ..services.orders import next_order_code, order_payload, price_summary, validate_checkout
 
 orders_bp = Blueprint("orders", __name__)
 
@@ -136,7 +129,6 @@ def create_order():
         db.session.delete(item)
 
     db.session.add(Payment(order_id=order.order_id, method=data["payment_method"], amount=order.total_amount, status="pending"))
-    db.session.add(Shipment(order_id=order.order_id, method="standard", shipping_fee=order.shipping_fee))
 
     # Ghi đè địa chỉ mặc định của khách bằng địa chỉ vừa dùng, để lần sau
     # điền sẵn. Khách sửa ở trang thanh toán thì địa chỉ mới thành mặc định.
@@ -165,30 +157,4 @@ def order_detail(order_code):
     # Trả 404 cả khi đơn của người khác để không lộ mã đơn nào tồn tại
     if order is None or (order.user_id != user.user_id and not user.is_admin):
         return {"error": "Không tìm thấy đơn hàng"}, 404
-    return {"order": order_payload(order)}
-
-
-@orders_bp.post("/orders/<order_code>/cancel")
-@login_required
-def cancel_my_order(order_code):
-    """Khách tự huỷ đơn khi đơn còn chờ xác nhận.
-
-    Khoá sẵn dòng đơn hàng để hai tab bấm huỷ cùng lúc không hoàn tồn kho hai lần;
-    admin không dùng đường này mà dùng PATCH /admin/orders/<code>/status.
-    """
-    user = current_user()
-    order = Order.query.filter_by(order_code=order_code).with_for_update().first()
-    # Trả 404 cả khi đơn của người khác để không lộ mã đơn nào tồn tại
-    if order is None or order.user_id != user.user_id:
-        return {"error": "Không tìm thấy đơn hàng"}, 404
-
-    data = request.get_json(silent=True) or {}
-    try:
-        cancel_order_by_customer(order, data.get("reason"))
-    except OrderRuleError as e:
-        db.session.rollback()
-        return {"error": str(e)}, 409
-
-    db.session.commit()
-    db.session.refresh(order)
     return {"order": order_payload(order)}

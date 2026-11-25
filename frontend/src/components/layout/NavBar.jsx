@@ -11,7 +11,9 @@ const MAIN_LINKS = [
   { to: '/products?category=cham-soc-ca-nhan', label: 'Chăm sóc cá nhân' },
   { to: '/products?category=nuoc-hoa', label: 'Nước hoa' },
   { to: '/products', label: 'Tất cả sản phẩm' },
-  { to: '/thuong-hieu', label: 'Thương hiệu' },
+  // Bỏ mục "Thương hiệu": trang danh sách thương hiệu (/thuong-hieu) chưa được
+  // làm nên bấm vào chỉ ra trang "đang xây dựng". Link tới TỪNG hãng vẫn chạy
+  // qua /thuong-hieu/<slug> và qua ô tìm kiếm.
 ]
 
 export default function NavBar() {

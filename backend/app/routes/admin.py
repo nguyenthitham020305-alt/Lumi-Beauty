@@ -24,7 +24,7 @@ from ..services.admin_customers import (
     set_active,
     status_breakdown,
 )
-from ..services.admin_orders import OrderRuleError, admin_order_payload, change_order_status, change_payment_status
+from ..services.admin_orders import OrderRuleError, admin_order_payload, change_order_status
 from ..services.admin_categories import (
     CategoryInUseError,
     admin_payload as category_payload,
@@ -42,7 +42,6 @@ from ..services.admin_products import (
     update_product,
 )
 from ..services.auth import admin_required, current_user
-from ..services.orders import PAYMENT_METHODS
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -103,10 +102,6 @@ def list_orders():
     if q:
         like = f"%{q}%"
         query = query.filter(or_(Order.order_code.like(like), Order.recipient_email.like(like), User.email.like(like)))
-    method = args.get("payment_method")
-    if method in PAYMENT_METHODS:
-        query = query.filter(Payment.method == method)
-
     # Đếm trước khi lọc trạng thái để các tab trạng thái luôn hiện đủ số lượng
     status_counts = dict(query.with_entities(Order.status, func.count(Order.order_id)).group_by(Order.status).all())
     status = args.get("status")
@@ -166,15 +161,9 @@ def _apply(order_code, change):
 @admin_bp.patch("/orders/<order_code>/status")
 @admin_required
 def update_order_status(order_code):
+    """Chỉ còn một đường: Đã đặt hàng -> Hoàn tất."""
     data = request.get_json(silent=True) or {}
-    return _apply(order_code, lambda order: change_order_status(order, data.get("status"), data.get("reason")))
-
-
-@admin_bp.patch("/orders/<order_code>/payment")
-@admin_required
-def update_payment_status(order_code):
-    data = request.get_json(silent=True) or {}
-    return _apply(order_code, lambda order: change_payment_status(order, data.get("status")))
+    return _apply(order_code, lambda order: change_order_status(order, data.get("status")))
 
 
 # ---------------------------------------------------------------- sản phẩm

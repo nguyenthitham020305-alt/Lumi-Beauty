@@ -4,20 +4,18 @@ from collections import deque
 from threading import Lock
 
 from flask import Blueprint, request
-from flask import session as cookie_session
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..extensions import db
 from ..models import ChatMessage, ChatSession, Product, ProductRecommendation
 from ..services import chatbot
-from ..services.auth import current_user
+from ..services.auth import current_user, login_required
 
 chat_bp = Blueprint("chat", __name__)
 log = logging.getLogger(__name__)
 
 MAX_MESSAGE_LENGTH = 1000
 HISTORY_LIMIT = 20          # số tin nhắn gần nhất đọc lại làm ngữ cảnh
-COOKIE_KEY = "chat_session_id"
 
 # Chặn spam: tối đa 20 tin / 5 phút và ít nhất 2 giây giữa hai tin
 RATE_WINDOW_SEC = 300
@@ -29,12 +27,8 @@ _hits_lock = Lock()
 
 
 def _rate_key():
-    """Khoá theo tài khoản nếu đã đăng nhập, không thì theo IP."""
-    user = current_user()
-    if user:
-        return f"u{user.user_id}"
-    forwarded = request.headers.get("X-Forwarded-For", "")
-    return f"ip{forwarded.split(',')[0].strip() or request.remote_addr or 'unknown'}"
+    """Chat chỉ dành cho người đã đăng nhập nên luôn khoá được theo tài khoản."""
+    return f"u{current_user().user_id}"
 
 
 def _check_rate_limit():
@@ -61,36 +55,27 @@ def _resolve_session(requested_id):
     """Lấy phiên chat của CHÍNH người gửi, hoặc tạo phiên mới.
 
     Không bao giờ tin session_id do client gửi lên một cách mù quáng: trước đây
-    chỉ cần đổi con số đó là đọc và ghi được hội thoại của người khác.
-    Phiên được coi là của người gửi khi:
-      - đã đăng nhập và phiên mang đúng user_id, HOẶC
-      - phiên chưa có chủ và chính cookie đã ký của trình duyệt này tạo ra nó.
+    chỉ cần đổi con số đó là đọc và ghi được hội thoại của người khác. Chat chỉ
+    dành cho người đã đăng nhập nên phiên luôn phải mang đúng user_id.
     """
     user = current_user()
-    owned_id = cookie_session.get(COOKIE_KEY)
     session = None
 
     if requested_id:
         candidate = db.session.get(ChatSession, requested_id)
-        if candidate is not None:
-            mine_by_account = user is not None and candidate.user_id == user.user_id
-            mine_by_cookie = candidate.user_id is None and candidate.session_id == owned_id
-            if mine_by_account or mine_by_cookie:
-                session = candidate
+        if candidate is not None and candidate.user_id == user.user_id:
+            session = candidate
 
     if session is None:
-        session = ChatSession(user_id=user.user_id if user else None)
+        session = ChatSession(user_id=user.user_id)
         db.session.add(session)
         db.session.flush()
-        cookie_session[COOKIE_KEY] = session.session_id
-    elif session.user_id is None and user is not None:
-        # Khách vãng lai đang chat rồi mới đăng nhập -> gắn phiên cho tài khoản
-        session.user_id = user.user_id
 
     return session
 
 
 @chat_bp.post("/chat")
+@login_required
 def send_message():
     """Body: {message, session_id?}. Chưa có session_id hợp lệ thì tạo phiên mới."""
     data = request.get_json(silent=True) or {}
@@ -172,6 +157,7 @@ def send_message():
 
 
 @chat_bp.post("/chat/recommendations/<int:reco_id>/click")
+@login_required
 def track_recommendation_click(reco_id):
     """Chỉ cho ghi nhận lượt bấm trên gợi ý thuộc phiên của chính người dùng."""
     reco = db.session.get(ProductRecommendation, reco_id)
@@ -179,12 +165,7 @@ def track_recommendation_click(reco_id):
         return {"error": "Không tìm thấy gợi ý"}, 404
 
     session = db.session.get(ChatSession, reco.session_id)
-    user = current_user()
-    mine = session is not None and (
-        (user is not None and session.user_id == user.user_id)
-        or (session.user_id is None and session.session_id == cookie_session.get(COOKIE_KEY))
-    )
-    if not mine:
+    if session is None or session.user_id != current_user().user_id:
         return {"error": "Không tìm thấy gợi ý"}, 404
 
     reco.is_clicked = True

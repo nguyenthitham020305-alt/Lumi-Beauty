@@ -65,12 +65,13 @@ export const api = {
   createOrder: (form) => post('/orders', form),
   myOrders: () => request('/orders'),
   order: (code) => request(`/orders/${encodeURIComponent(code)}`),
-  cancelMyOrder: (code, reason) => post(`/orders/${encodeURIComponent(code)}/cancel`, { reason }),
 
   me: () => request('/auth/me'),
   login: (email, password) => post('/auth/login', { email, password }),
   register: (form) => post('/auth/register', form),
   logout: () => post('/auth/logout'),
+  updateProfile: (form) => patch('/auth/me', form),
+  changePassword: (form) => post('/auth/change-password', form),
 
   /** params: { range: 7d|30d|90d|month|custom, from, to } */
   adminStats: (params) => {
@@ -83,8 +84,7 @@ export const api = {
     return request(`/admin/orders?${search}`)
   },
   adminOrder: (code) => request(`/admin/orders/${encodeURIComponent(code)}`),
-  updateOrderStatus: (code, status, reason) => patch(`/admin/orders/${encodeURIComponent(code)}/status`, { status, reason }),
-  updatePaymentStatus: (code, status) => patch(`/admin/orders/${encodeURIComponent(code)}/payment`, { status }),
+  updateOrderStatus: (code, status) => patch(`/admin/orders/${encodeURIComponent(code)}/status`, { status }),
 
   /** params: { q, category, status, sort, page } */
   adminProducts: (params) => {

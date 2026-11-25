@@ -28,26 +28,13 @@ export function saveSession(session) {
 /**
  * Hội thoại nào được giữ lại khi người đang đăng nhập thay đổi.
  *
- * - Khách vãng lai rồi đăng nhập (chủ đang là null): GIỮ, vì máy chủ gắn luôn
- *   phiên chat đó cho tài khoản vừa đăng nhập.
- * - Đăng xuất, hoặc đổi sang tài khoản khác: XOÁ sạch hội thoại của người trước.
+ * Chatbot chỉ dành cho người đã đăng nhập nên hội thoại luôn có chủ. Hễ chủ
+ * không khớp với người đang đăng nhập — đăng xuất, đổi tài khoản, hay dữ liệu
+ * cũ không ghi chủ — thì xoá sạch, để người sau không đọc được của người trước.
  *
  * @param {object} session  hội thoại đang có
  * @param {number|null} userId  id người đang đăng nhập, null nếu chưa đăng nhập
  */
 export function sessionForUser(session, userId) {
-  const owner = session.userId
-
-  // Dữ liệu còn lại từ bản TRƯỚC khi có trường userId: không biết của ai.
-  // Chưa đăng nhập thì coi là của khách vãng lai; đã có người đăng nhập thì
-  // xoá cho chắc, vì rất có thể là hội thoại của tài khoản đăng nhập trước đó.
-  if (owner === undefined) {
-    return userId === null ? { ...session, userId: null } : { ...EMPTY_SESSION, userId }
-  }
-
-  // Khách vãng lai rồi đăng nhập: giữ, máy chủ gắn phiên đó cho tài khoản mới.
-  if (owner === null) return userId === null ? session : { ...session, userId }
-
-  // Đăng xuất hoặc đổi tài khoản: xoá sạch hội thoại của người trước.
-  return owner === userId ? session : { ...EMPTY_SESSION, userId }
+  return session.userId === userId ? session : { ...EMPTY_SESSION, userId }
 }

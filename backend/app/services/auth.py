@@ -6,7 +6,7 @@ import bcrypt
 from flask import g, session
 
 from ..extensions import db
-from ..models import User
+from ..models import Province, User, Ward
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +70,78 @@ def validate_registration(data):
     return {"name": name, "email": email, "phone": phone, "password": password}, errors
 
 
+def validate_profile(data):
+    """Kiểm tra thông tin khách tự sửa trong trang hồ sơ.
+
+    KHÔNG có email: email là tên đăng nhập, mà hệ thống chưa gửi được thư xác
+    minh, nên khách gõ nhầm là mất luôn đường vào tài khoản. Muốn đổi email thì
+    phải qua quản trị viên.
+
+    Địa chỉ mặc định là tuỳ chọn, nhưng phải đủ CẢ BA phần hoặc bỏ trống cả ba:
+    `User.saved_address()` chỉ điền sẵn khi đủ ba, thiếu một phần thì dữ liệu
+    lưu được mà không dùng được.
+    """
+    name = (data.get("name") or "").strip()
+    phone = re.sub(r"[\s.-]", "", data.get("phone") or "")
+    street = (data.get("street_address") or "").strip()
+    raw_province = data.get("province_code")
+    raw_ward = data.get("ward_code")
+
+    errors = {}
+    if not 2 <= len(name) <= 100:
+        errors["name"] = "Họ tên phải từ 2 đến 100 ký tự"
+    if not PHONE_RE.match(phone):
+        errors["phone"] = "Số điện thoại không hợp lệ (vd 0912345678)"
+
+    has_any = bool(street) or raw_province not in (None, "") or raw_ward not in (None, "")
+    province = ward = None
+    if has_any:
+        try:
+            province = db.session.get(Province, int(raw_province))
+        except (TypeError, ValueError):
+            pass
+        if province is None:
+            errors["province_code"] = "Tỉnh/Thành phố là bắt buộc"
+        try:
+            ward = db.session.get(Ward, int(raw_ward))
+        except (TypeError, ValueError):
+            pass
+        if ward is None or (province and ward.province_code != province.province_code):
+            errors["ward_code"] = "Phường/Xã là bắt buộc"
+            ward = None
+        if not 5 <= len(street) <= 255:
+            errors["street_address"] = "Vui lòng nhập số nhà, tên đường (5-255 ký tự)"
+
+    return {
+        "name": name,
+        "phone": phone,
+        # Bỏ trống cả ba = xoá địa chỉ đã lưu
+        "province_code": province.province_code if province else None,
+        "ward_code": ward.ward_code if ward else None,
+        "street_address": street if has_any else None,
+    }, errors
+
+
+def change_password(user, current, new_password, confirm):
+    """Đổi mật khẩu. Trả về dict lỗi theo trường, rỗng nghĩa là thành công.
+
+    Bắt buộc nhập mật khẩu hiện tại: nếu không, ai mượn được máy lúc khách quên
+    đăng xuất là chiếm được tài khoản ngay.
+    """
+    if not check_password(current or "", user.password):
+        return {"current_password": "Mật khẩu hiện tại không đúng"}
+
+    error = validate_password(new_password or "", confirm)
+    if error:
+        field = "confirm_password" if error == "Mật khẩu xác nhận không khớp" else "new_password"
+        return {field: error}
+    if check_password(new_password, user.password):
+        return {"new_password": "Mật khẩu mới phải khác mật khẩu hiện tại"}
+
+    user.password = hash_password(new_password)
+    return {}
+
+
 def authenticate(email, password):
     user = User.query.filter_by(email=normalize_email(email)).first()
     if user is None:
@@ -79,18 +151,10 @@ def authenticate(email, password):
 
 
 def log_in(user):
-    from .cart import GUEST_CART_KEY, merge_guest_cart
-
-    guest_cart_id = session.get(GUEST_CART_KEY)
     # clear() trước để chống session fixation: phiên cũ không mang sang phiên đăng nhập
     session.clear()
     session["user_id"] = user.user_id
     session.permanent = True
-    try:
-        merge_guest_cart(guest_cart_id, user)
-    except Exception:  # lỗi gộp giỏ không được chặn việc đăng nhập
-        db.session.rollback()
-        log.exception("Không gộp được giỏ khách %s vào user %s", guest_cart_id, user.user_id)
 
 
 def log_out():

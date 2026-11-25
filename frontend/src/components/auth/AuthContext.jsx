@@ -41,6 +41,8 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    // Trang hồ sơ gọi sau khi lưu, để tên hiển thị trên đầu trang đổi theo ngay
+    updateUser: setUser,
     modalMode,
     openAuth: (mode = 'login') => setModalMode(mode),
     closeAuth: () => setModalMode(null),

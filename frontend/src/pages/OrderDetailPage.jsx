@@ -1,5 +1,4 @@
 import { CheckCircle2, Copy, MapPin, QrCode } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuth } from '../components/auth/AuthContext'
 import {
@@ -9,7 +8,6 @@ import {
   PAYMENT_METHOD_LABEL,
   PAYMENT_STATUS_LABEL,
 } from '../components/order/orderLabels'
-import CancelOrder from '../components/order/CancelOrder'
 import PriceSummary from '../components/order/PriceSummary'
 import Breadcrumb from '../components/ui/Breadcrumb'
 import { useToast } from '../components/ui/Toast'
@@ -18,10 +16,9 @@ import { api } from '../lib/api'
 import { formatPrice, sizedImage } from '../lib/format'
 
 function StatusSteps({ status }) {
-  if (status === 'cancelled') return null
   const current = ORDER_STEPS.findIndex((s) => s.status === status)
   return (
-    <ol className="mt-5 grid grid-cols-3 gap-2" aria-label="Tiến trình đơn hàng">
+    <ol className="mt-5 grid grid-cols-2 gap-2" aria-label="Tiến trình đơn hàng">
       {ORDER_STEPS.map((step, i) => (
         <li key={step.status} className="text-center">
           <span className={`mx-auto block h-1.5 rounded-full ${i <= current ? 'bg-brand-500' : 'bg-slate-200'}`} />
@@ -55,47 +52,11 @@ function CopyValue({ label, value, display }) {
   )
 }
 
-function TransferQr({ qr }) {
-  return (
-    <section className="rounded-3xl border-2 border-brand-200 bg-brand-50/40 p-5 md:p-6" aria-labelledby="qr-heading">
-      <h2 id="qr-heading" className="flex items-center gap-2 text-lg font-semibold text-slate-900">
-        <QrCode className="size-5 text-brand-600" aria-hidden /> Quét mã để thanh toán
-      </h2>
-      <div className="mt-4 grid items-center gap-5 sm:grid-cols-[220px_1fr]">
-        <img src={qr.image_url} alt={`Mã VietQR chuyển khoản ${formatPrice(qr.amount)}`} className="mx-auto w-full max-w-[220px] rounded-2xl bg-white p-2 shadow-sm" />
-        <div>
-          <dl className="divide-y divide-brand-100 text-sm">
-            {qr.bank_name && (
-              <div className="flex justify-between gap-3 py-1.5">
-                <dt className="text-slate-500">Ngân hàng</dt>
-                <dd className="font-semibold text-slate-800">{qr.bank_name}</dd>
-              </div>
-            )}
-            <CopyValue label="Số tài khoản" value={qr.account_no} />
-            <div className="flex justify-between gap-3 py-1.5">
-              <dt className="text-slate-500">Chủ tài khoản</dt>
-              <dd className="text-right font-semibold text-slate-800">{qr.account_name}</dd>
-            </div>
-            <CopyValue label="Số tiền" value={qr.amount} display={formatPrice(qr.amount)} />
-            <CopyValue label="Nội dung" value={qr.content} />
-          </dl>
-          <p className="mt-3 text-xs text-slate-500">
-            Mở app ngân hàng, quét mã và giữ nguyên nội dung chuyển khoản. Đơn hàng sẽ được xác nhận sau khi LUMI nhận được tiền.
-          </p>
-        </div>
-      </div>
-    </section>
-  )
-}
-
 export default function OrderDetailPage() {
   const { code } = useParams()
   const { state } = useLocation()
   const { user, loading: authLoading, openAuth } = useAuth()
   const { data, loading, error } = useFetch(() => (user ? api.order(code) : Promise.resolve(null)), [code, user?.id])
-  // useFetch không có refetch nên giữ bản đơn mới nhất do API huỷ trả về
-  const [updated, setUpdated] = useState(null)
-  useEffect(() => setUpdated(null), [code])
 
   if (authLoading || (loading && !data)) return <p className="container-page py-20 text-center text-slate-500">Đang tải đơn hàng...</p>
   if (!user) {
@@ -119,12 +80,12 @@ export default function OrderDetailPage() {
     )
   }
 
-  const order = updated ?? data.order
+  const order = data.order
   return (
     <div className="container-page py-6">
       <Breadcrumb items={[{ label: 'Trang chủ', to: '/' }, { label: 'Đơn hàng của tôi', to: '/orders' }, { label: order.order_code }]} />
 
-      {state?.justPlaced && order.status !== 'cancelled' && (
+      {state?.justPlaced && (
         <div className="mt-4 flex items-center gap-3 rounded-2xl bg-emerald-50 p-4 text-emerald-800" role="status">
           <CheckCircle2 className="size-6 shrink-0" aria-hidden />
           <p>
@@ -146,15 +107,7 @@ export default function OrderDetailPage() {
               </span>
             </div>
             <StatusSteps status={order.status} />
-            {order.status === 'cancelled' && order.cancelled_reason && (
-              <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
-                <b className="font-semibold text-slate-700">Lý do huỷ:</b> {order.cancelled_reason}
-              </p>
-            )}
-            <CancelOrder order={order} onUpdated={setUpdated} />
           </section>
-
-          {order.transfer_qr && <TransferQr qr={order.transfer_qr} />}
 
           <section className="rounded-3xl border border-slate-100 p-5 md:p-6" aria-labelledby="items-heading">
             <h2 id="items-heading" className="text-lg font-semibold text-slate-900">

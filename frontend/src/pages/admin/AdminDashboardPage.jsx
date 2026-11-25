@@ -105,7 +105,7 @@ export default function AdminDashboardPage() {
             value={money(t.revenue)}
             hint={t.orders ? `TB ${money(t.avg_order_value)}/đơn` : 'Chưa có đơn'}
           />
-          <StatTile icon={Receipt} label="Tổng đơn hàng" value={num(t.orders)} hint={`${num(t.cancelled_orders)} đơn huỷ`} />
+          <StatTile icon={Receipt} label="Tổng đơn hàng" value={num(t.orders)} hint={`${num(t.completed_orders)} đơn hoàn tất`} />
           <StatTile
             icon={Clock}
             label="Đơn chờ xử lý"

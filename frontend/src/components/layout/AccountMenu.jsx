@@ -1,4 +1,4 @@
-import { ChevronDown, LayoutDashboard, LogOut, Package, UserRound } from 'lucide-react'
+import { ChevronDown, LayoutDashboard, LogOut, Package, UserCog, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
@@ -82,6 +82,14 @@ export default function AccountMenu() {
             <p className="truncate font-semibold text-slate-800">{user.name}</p>
             <p className="truncate text-xs text-slate-500">{user.email}</p>
           </div>
+          <Link
+            to="/tai-khoan"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="mt-1 flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-brand-50 hover:text-brand-700"
+          >
+            <UserCog className="size-4" aria-hidden /> Tài khoản của tôi
+          </Link>
           <Link
             to="/orders"
             role="menuitem"

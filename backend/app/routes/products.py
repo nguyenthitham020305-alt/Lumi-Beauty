@@ -23,7 +23,7 @@ def _has_received(user_id, product_id):
     """Đã mua = có đơn chứa sản phẩm này ở trạng thái đã giao thành công."""
     return db.session.query(
         OrderItem.query.join(Order, Order.order_id == OrderItem.order_id)
-        .filter(Order.user_id == user_id, Order.status == "delivered", OrderItem.product_id == product_id)
+        .filter(Order.user_id == user_id, Order.status == "completed", OrderItem.product_id == product_id)
         .exists()
     ).scalar()
 

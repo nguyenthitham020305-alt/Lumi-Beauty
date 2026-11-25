@@ -229,8 +229,9 @@ CREATE TABLE `orders` (
   `discount_amount`   INT UNSIGNED NOT NULL DEFAULT 0,
   `total_amount`      INT UNSIGNED NOT NULL,        -- subtotal + shipping_fee - discount_amount
 
-  `status`            ENUM('pending','confirmed','delivered','cancelled')
-                      NOT NULL DEFAULT 'pending',
+  -- Khach dat xong la 'pending'; admin bam Hoan tat la 'completed'.
+  -- Khong co buoc trung gian vi cua hang tu giao va thu tien khi giao.
+  `status`            ENUM('pending','completed') NOT NULL DEFAULT 'pending',
 
   -- Thong tin nhan hang duoc CHUP LAI tai thoi diem dat.
   -- Khach doi so dien thoai sau nay thi don cu van giu thong tin luc dat.
@@ -243,7 +244,6 @@ CREATE TABLE `orders` (
   `shipping_address`  VARCHAR(500) NOT NULL,        -- chuoi day du chup lai luc dat
   `note`              VARCHAR(500) DEFAULT NULL,
 
-  `cancelled_reason`  VARCHAR(255) DEFAULT NULL,
   `updated_at`        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
   PRIMARY KEY (`order_id`),
@@ -286,34 +286,16 @@ CREATE TABLE `order_items` (
 CREATE TABLE `payments` (
   `payment_id`        INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `order_id`          INT UNSIGNED NOT NULL,
-  `method`            ENUM('cod','bank_transfer','momo','vnpay') NOT NULL DEFAULT 'cod',
+  -- Chi thu tien khi giao hang (COD), khach khong phai chon phuong thuc
+  `method`            ENUM('cod') NOT NULL DEFAULT 'cod',
   `amount`            INT UNSIGNED NOT NULL,
-  `status`            ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
-  `transaction_code`  VARCHAR(100) DEFAULT NULL,   -- ma giao dich tu cong thanh toan
+  `status`            ENUM('pending','paid') NOT NULL DEFAULT 'pending',
   `paid_at`           DATETIME     DEFAULT NULL,
   `created_at`        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`payment_id`),
   UNIQUE KEY `uq_payments_order` (`order_id`),
   KEY `idx_payments_status` (`status`),
   CONSTRAINT `fk_payments_order`
-    FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
-CREATE TABLE `shipments` (
-  `shipping_id`    INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `order_id`       INT UNSIGNED NOT NULL,
-  `method`         ENUM('standard','express') NOT NULL DEFAULT 'standard',
-  `shipping_fee`   INT UNSIGNED NOT NULL DEFAULT 0,
-  `status`         ENUM('pending','picked_up','in_transit','delivered','failed')
-                   NOT NULL DEFAULT 'pending',
-  `tracking_code`  VARCHAR(100) DEFAULT NULL,
-  `deliver_date`   DATETIME     DEFAULT NULL,
-  `created_at`     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`shipping_id`),
-  UNIQUE KEY `uq_shipments_order` (`order_id`),
-  KEY `idx_shipments_status` (`status`),
-  CONSTRAINT `fk_shipments_order`
     FOREIGN KEY (`order_id`) REFERENCES `orders` (`order_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -352,7 +334,6 @@ CREATE TABLE `chat_sessions` (
   `session_id`  INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `user_id`     INT UNSIGNED DEFAULT NULL,   -- NULL = khach chua dang nhap
   `started_at`  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `ended_at`    DATETIME     DEFAULT NULL,
   PRIMARY KEY (`session_id`),
   KEY `idx_cs_user` (`user_id`, `started_at`),
   CONSTRAINT `fk_cs_user`
@@ -453,40 +434,3 @@ FOR EACH ROW BEGIN
 END$$
 
 DELIMITER ;
-
-
--- =====================================================================
---  VIEW tien dung
--- =====================================================================
-
--- Trang danh sach san pham: gop san pham + thuong hieu + danh muc
-CREATE OR REPLACE VIEW `v_products` AS
-SELECT
-  p.`product_id`, p.`sku`, p.`slug`, p.`name`,
-  b.`name` AS `brand_name`, b.`slug` AS `brand_slug`,
-  p.`price`, p.`original_price`, p.`discount_percent`,
-  p.`price_min`, p.`price_max`, p.`variant_count`,
-  p.`stock`, p.`rating`, p.`review_count`, p.`sold_count`,
-  p.`image`, p.`status`,
-  GROUP_CONCAT(c.`name` ORDER BY c.`name` SEPARATOR ', ') AS `category_names`
-FROM `products` p
-LEFT JOIN `brands` b              ON b.`brand_id` = p.`brand_id`
-LEFT JOIN `product_categories` pc ON pc.`product_id` = p.`product_id`
-LEFT JOIN `categories` c          ON c.`category_id` = pc.`category_id`
-GROUP BY p.`product_id`;
-
-
--- Trang quan tri: tom tat don hang kem trang thai thanh toan / van chuyen
-CREATE OR REPLACE VIEW `v_orders` AS
-SELECT
-  o.`order_id`, o.`order_code`, o.`order_date`, o.`status`,
-  o.`subtotal`, o.`shipping_fee`, o.`discount_amount`, o.`total_amount`,
-  o.`recipient_name`, o.`recipient_phone`, o.`shipping_address`,
-  u.`user_id`, u.`name` AS `customer_name`, u.`email` AS `customer_email`,
-  pay.`method` AS `payment_method`, pay.`status` AS `payment_status`,
-  sh.`method`  AS `shipping_method`, sh.`status` AS `shipping_status`,
-  (SELECT COUNT(*) FROM `order_items` oi WHERE oi.`order_id` = o.`order_id`) AS `item_count`
-FROM `orders` o
-LEFT JOIN `users`     u   ON u.`user_id`  = o.`user_id`
-LEFT JOIN `payments`  pay ON pay.`order_id` = o.`order_id`
-LEFT JOIN `shipments` sh  ON sh.`order_id`  = o.`order_id`;

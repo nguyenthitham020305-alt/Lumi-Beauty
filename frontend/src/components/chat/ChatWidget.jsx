@@ -36,7 +36,7 @@ function RecommendedProduct({ product }) {
 }
 
 export default function ChatWidget() {
-  const { isOpen, setIsOpen, pendingQuestion, clearPendingQuestion } = useChat()
+  const { isOpen, setIsOpen, openChat, pendingQuestion, clearPendingQuestion } = useChat()
   const { user, loading: authLoading } = useAuth()
   const [session, setSession] = useState(readSession)
   const [input, setInput] = useState('')
@@ -110,7 +110,7 @@ export default function ChatWidget() {
     <>
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => (isOpen ? setIsOpen(false) : openChat())}
         aria-label={isOpen ? 'Đóng trợ lý Lumi' : 'Mở trợ lý tư vấn Lumi'}
         aria-expanded={isOpen}
         className="fixed right-5 bottom-5 z-50 grid size-14 place-items-center rounded-full bg-brand-600 text-white shadow-xl shadow-brand-700/30 transition hover:scale-105 hover:bg-brand-700"

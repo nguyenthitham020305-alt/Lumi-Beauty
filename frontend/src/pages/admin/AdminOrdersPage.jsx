@@ -14,7 +14,7 @@ import { useFetch } from '../../hooks/useFetch'
 import { api } from '../../lib/api'
 import { formatPrice } from '../../lib/format'
 
-const STATUS_TABS = ['', 'pending', 'confirmed', 'delivered', 'cancelled']
+const STATUS_TABS = ['', 'pending', 'completed']
 const SEARCH_DEBOUNCE_MS = 400
 
 const selectClass =
@@ -31,7 +31,6 @@ export default function AdminOrdersPage() {
   const filters = {
     q: params.get('q') ?? '',
     status: params.get('status') ?? '',
-    payment_method: params.get('payment_method') ?? '',
     sort: params.get('sort') ?? 'newest',
     page: Number(params.get('page')) || 1,
   }
@@ -45,7 +44,6 @@ export default function AdminOrdersPage() {
     const search = new URLSearchParams()
     if (next.q) search.set('q', next.q)
     if (next.status) search.set('status', next.status)
-    if (next.payment_method) search.set('payment_method', next.payment_method)
     if (next.sort !== 'newest') search.set('sort', next.sort)
     if (next.page > 1) search.set('page', next.page)
     setParams(search, { replace: true })
@@ -107,16 +105,6 @@ export default function AdminOrdersPage() {
             />
           </label>
           <div className="grid grid-cols-2 gap-3 md:flex">
-            <select
-              aria-label="Phương thức thanh toán"
-              value={filters.payment_method}
-              onChange={(e) => updateFilters({ payment_method: e.target.value })}
-              className={selectClass}
-            >
-              <option value="">Mọi phương thức</option>
-              <option value="cod">COD</option>
-              <option value="bank_transfer">Chuyển khoản QR</option>
-            </select>
             <select aria-label="Sắp xếp theo ngày đặt" value={filters.sort} onChange={(e) => updateFilters({ sort: e.target.value })} className={selectClass}>
               <option value="newest">Mới nhất</option>
               <option value="oldest">Cũ nhất</option>

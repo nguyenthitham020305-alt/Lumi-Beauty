@@ -10,8 +10,10 @@ from ..extensions import db
 from ..models import Order, OrderItem, Payment, Product, User
 
 # Đơn đã huỷ không tính vào doanh thu
-REVENUE_STATUSES = ("pending", "confirmed", "delivered")
-ORDER_STATUSES_ALL = ("pending", "confirmed", "delivered", "cancelled")
+# Doanh thu = tiền THỰC THU. Đơn chưa hoàn tất là khách chưa trả đồng nào
+# (COD trả khi nhận hàng), cộng vào doanh thu là thổi phồng con số.
+REVENUE_STATUSES = ("completed",)
+ORDER_STATUSES_ALL = ("pending", "completed")
 
 RANGES = ("7d", "30d", "90d", "month", "custom")
 TOP_PRODUCTS_LIMIT = 7       # trần 8 màu của bảng màu; 7 + "khác" là an toàn
@@ -74,21 +76,21 @@ def totals(start, end):
             func.coalesce(func.sum(revenue_case), 0),
             func.count(Order.order_id),
             func.coalesce(func.sum(case((Order.status == "pending", 1), else_=0)), 0),
-            func.coalesce(func.sum(case((Order.status == "cancelled", 1), else_=0)), 0),
+            func.coalesce(func.sum(case((Order.status == "completed", 1), else_=0)), 0),
         )
         .filter(Order.order_date >= lo, Order.order_date <= hi)
         .one()
     )
-    revenue, order_count, pending, cancelled = (int(v or 0) for v in row)
-    paid_orders = order_count - cancelled
+    revenue, order_count, pending, completed = (int(v or 0) for v in row)
 
     return {
         "revenue": revenue,
         "orders": order_count,
         "pending_orders": pending,
-        "cancelled_orders": cancelled,
-        # Giá trị trung bình mỗi đơn — chỉ tính trên đơn còn hiệu lực
-        "avg_order_value": round(revenue / paid_orders) if paid_orders else 0,
+        "completed_orders": completed,
+        # Giá trị trung bình mỗi đơn — chia cho số đơn ĐÃ hoàn tất, vì doanh thu
+        # cũng chỉ cộng đơn hoàn tất; chia cho tổng đơn sẽ ra con số sai
+        "avg_order_value": round(revenue / completed) if completed else 0,
         "customers": User.query.filter_by(role="customer").count(),
         "products": Product.query.count(),
     }
@@ -170,36 +172,6 @@ def top_products(start, end, limit=TOP_PRODUCTS_LIMIT):
     ]
 
 
-def payment_split(start, end):
-    """Tỷ lệ COD / chuyển khoản QR trên số đơn còn hiệu lực."""
-    lo, hi = _bounds(start, end)
-    rows = (
-        db.session.query(
-            Payment.method,
-            func.count(Payment.payment_id),
-            func.coalesce(func.sum(Order.total_amount), 0),
-            func.coalesce(func.sum(case((Payment.status == "paid", 1), else_=0)), 0),
-        )
-        .join(Order, Order.order_id == Payment.order_id)
-        .filter(Order.order_date >= lo, Order.order_date <= hi, Order.status.in_(REVENUE_STATUSES))
-        .group_by(Payment.method)
-        .all()
-    )
-    data = {m: {"orders": int(n), "revenue": int(rev), "paid": int(paid)} for m, n, rev, paid in rows}
-    total = sum(v["orders"] for v in data.values())
-
-    return [
-        {
-            "method": m,
-            "orders": data.get(m, {}).get("orders", 0),
-            "revenue": data.get(m, {}).get("revenue", 0),
-            "paid_orders": data.get(m, {}).get("paid", 0),
-            "share": round(data.get(m, {}).get("orders", 0) * 100 / total, 1) if total else 0,
-        }
-        for m in ("cod", "bank_transfer")
-    ]
-
-
 def recent_orders(start, end, limit=RECENT_ORDERS_LIMIT):
     orders = (
         _orders_in_range(start, end)
@@ -235,6 +207,5 @@ def build_report(range_key, from_str, to_str):
         "revenue_series": revenue_series(start, end, bucket),
         "status_breakdown": status_breakdown(start, end),
         "top_products": top_products(start, end),
-        "payment_split": payment_split(start, end),
         "recent_orders": recent_orders(start, end),
     }

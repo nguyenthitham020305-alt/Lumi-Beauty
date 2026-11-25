@@ -28,20 +28,7 @@ export const AXIS_TEXT = '#64748b'
  */
 export const STATUS_COLOR = {
   pending: '#4bb39b',
-  confirmed: '#2a9782',
-  delivered: '#116257',
-  cancelled: '#94a3b8',
-}
-
-/** Hai phương thức thanh toán: 2 bước của cùng thang teal. */
-export const PAYMENT_COLOR = {
-  cod: '#4bb39b',
-  bank_transfer: '#116257',
-}
-
-export const PAYMENT_LABEL = {
-  cod: 'COD (khi nhận hàng)',
-  bank_transfer: 'Chuyển khoản QR',
+  completed: '#116257',
 }
 
 /* ---------------------------------------------------------------- định dạng */

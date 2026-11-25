@@ -13,7 +13,6 @@ export default function BrandGrid() {
       <SectionHeading
         title={<span id="brand-heading">Thương hiệu nổi bật</span>}
         subtitle="Hơn 180 thương hiệu chính hãng từ Hàn, Nhật, Pháp, Mỹ..."
-        to="/thuong-hieu"
       />
       <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:gap-4 lg:grid-cols-6">
         {loading &&
